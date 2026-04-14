@@ -352,6 +352,13 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
     <div class="card">
       <div class="slider-group">
         <div class="slider-label">
+          <span>총급여 (연봉)</span>
+          <div class="slider-value" id="v-salary">5,000만 원</div>
+        </div>
+        <input type="range" id="s-salary" min="2000" max="15000" value="5000" step="100" oninput="calcSim()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">
           <span>투자 원금 (총액)</span>
           <div class="slider-value" id="v-principal">3,000만 원</div>
         </div>
@@ -374,6 +381,9 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
       <div class="toggle-row">
         <div class="toggle" id="t-seomin" onclick="toggleSeomin()"></div>
         <span>ISA 서민형 (비과세 1,000만 원)</span>
+      </div>
+      <div style="font-size:11px; color:var(--dim); margin-top:-4px; padding-left:50px;">
+        총급여 5,000만 이하 또는 종합소득 3,800만 이하 시 서민형 가입 가능
       </div>
     </div>
 
@@ -592,10 +602,12 @@ function toggleSeomin() {
 }
 
 function calcSim() {
+  const salary = parseInt(document.getElementById('s-salary').value);
   const principal = parseInt(document.getElementById('s-principal').value);
   const rate = parseFloat(document.getElementById('s-rate').value);
   const years = parseInt(document.getElementById('s-years').value);
 
+  document.getElementById('v-salary').textContent = salary.toLocaleString() + '만 원';
   document.getElementById('v-principal').textContent = principal.toLocaleString() + '만 원';
   document.getElementById('v-rate').textContent = rate + '%';
   document.getElementById('v-years').textContent = years + '년';
@@ -609,8 +621,6 @@ function calcSim() {
     const tax = gain * 0.154;
     normalBal = normalBal + gain - tax;
   }
-  const normalGain = normalBal - principal;
-  const normalTax = principal * Math.pow(1 + r, years) - principal - normalGain;
 
   // ─── ISA: 과세이연 + 비과세 한도 + 9.9% 분리과세 ───
   const isaGross = principal * Math.pow(1 + r, years);
@@ -620,15 +630,21 @@ function calcSim() {
   const isaTax = isaTaxable * 0.099;
   const isaNet = isaGross - isaTax;
 
-  // ─── IRP: 과세이연 + 세액공제 + 연금수령 3.3~5.5% ───
+  // ─── IRP: 과세이연 + 세액공제 + 연금수령 저율과세 ───
   const irpGross = principal * Math.pow(1 + r, years);
   const irpProfit = irpGross - principal;
-  // 세액공제 효과: 납입액에 대해 평균 14.85% 환급, 재투자 가정
-  const creditRate = 0.1485;
-  const annualCredit = Math.min(principal / years, 900) * creditRate;
-  const creditFV = annualCredit * ((Math.pow(1 + r, years) - 1) / r);
-  // 연금수령 시 저율과세 (평균 4.4% 가정)
-  const irpTax = irpProfit * 0.044;
+  // 세액공제: 연봉 기반 공제율, 연 900만 한도 적용
+  const creditPct = salary <= 5500 ? 0.165 : 0.132;
+  const annualContrib = principal / years;
+  const annualCredit = Math.min(annualContrib, 900) * creditPct;
+  // 세액공제 매년 말 재투자 → 남은 기간만큼 복리
+  let creditFV = 0;
+  for (let y = 1; y <= years; y++) {
+    creditFV += annualCredit * Math.pow(1 + r, years - y);
+  }
+  // 연금수령 저율과세 (55세 이후 연금수령 시 평균 3.3~5.5%, 가중평균 4.4% 가정)
+  const irpPensionTaxRate = 0.044;
+  const irpTax = irpProfit * irpPensionTaxRate;
   const irpNet = irpGross - irpTax + creditFV;
 
   document.getElementById('r-irp').textContent = fmt(irpNet);
@@ -668,11 +684,12 @@ function calcSim() {
     const it = Math.max(0, ip - isaFreeLimit) * 0.099;
     dIsa.push(Math.round(ig - it));
 
-    // IRP: 과세이연 + 세액공제 재투자
+    // IRP: 과세이연 + 세액공제 매년 누적 재투자
     const rg = principal * Math.pow(1 + r, y);
     const rp = rg - principal;
-    const rt = rp * 0.044;
-    const cf = y > 0 ? annualCredit * ((Math.pow(1 + r, y) - 1) / r) : 0;
+    const rt = rp * irpPensionTaxRate;
+    let cf = 0;
+    for (let j = 1; j <= y; j++) { cf += annualCredit * Math.pow(1 + r, y - j); }
     dIrp.push(Math.round(rg - rt + cf));
   }
 
