@@ -343,8 +343,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
   <!-- Tabs -->
   <div class="tabs">
     <button class="tab active" onclick="showTab('sim', event)">세후 수익 비교</button>
-    <button class="tab" onclick="showTab('guide', event)">어디부터 넣을까</button>
-    <button class="tab" onclick="showTab('detail', event)">계좌별 세금 구조</button>
+    <button class="tab" onclick="showTab('guide', event)">맞춤 배분</button>
+    <button class="tab" onclick="showTab('detail', event)">세금 비교</button>
   </div>
 
   <!-- TAB 1: 세후 수익 비교 시뮬레이션 -->
@@ -418,137 +418,95 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
     </div>
   </div>
 
-  <!-- TAB 2: 어디부터 넣을까 가이드 -->
+  <!-- TAB 2: 맞춤 배분 추천 -->
   <div id="tab-guide" class="section">
-    <div class="info-card">
-      <strong>절세 계좌 우선순위</strong><br>
-      돈이 한정돼 있을 때, 어디부터 채워야 할까?
-    </div>
-
-    <div class="guide-grid">
-      <div class="guide-card irp">
-        <div class="guide-icon">1</div>
-        <div class="guide-body">
-          <div class="g-title">연금저축 + IRP — 연 900만 원</div>
-          <div class="g-desc">
-            넣는 순간 <span class="g-highlight">13.2~16.5% 세액공제</span> (최대 148.5만 환급).<br>
-            수익에 대한 세금도 55세까지 이연. 가장 강력한 절세 도구.<br>
-            단점: 55세 전 인출 시 기타소득세 16.5% 부과.
-          </div>
+    <div class="card">
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>총급여 (연봉)</span>
+          <div class="slider-value" id="v-g-salary">5,000만 원</div>
         </div>
+        <input type="range" id="s-g-salary" min="2000" max="15000" value="5000" step="100" oninput="calcGuide()">
       </div>
-      <div class="guide-card isa">
-        <div class="guide-icon">2</div>
-        <div class="guide-body">
-          <div class="g-title">ISA — 연 4,000만 원 (누적 2억)</div>
-          <div class="g-desc">
-            순이익 <span class="g-highlight">500만 원까지 비과세</span> (서민형 1,000만).<br>
-            초과분도 9.9% 분리과세로 일반계좌(15.4%)보다 유리.<br>
-            3년 의무보유 후 자유인출. 중기 자금에 적합.
-          </div>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>투자 가능 금액 (연간)</span>
+          <div class="slider-value" id="v-g-budget">1,500만 원</div>
         </div>
-      </div>
-      <div class="guide-card normal">
-        <div class="guide-icon">3</div>
-        <div class="guide-body">
-          <div class="g-title">일반계좌 — 한도 없음</div>
-          <div class="g-desc">
-            이자·배당 수익에 15.4% 과세. 금융소득 2,000만 초과 시 종합과세.<br>
-            자유도는 높지만 절세 혜택 없음. 위의 계좌를 먼저 채운 뒤 활용.
-          </div>
-        </div>
+        <input type="range" id="s-g-budget" min="100" max="6000" value="1500" step="100" oninput="calcGuide()">
       </div>
     </div>
 
-    <div class="summary-box">
-      <div style="font-size:14px; font-weight:700; margin-bottom:12px; color:var(--cream);">
-        상황별 추천
-      </div>
-      <div class="summary-row">
-        <div class="summary-dot" style="background:var(--gold);"></div>
-        <span class="s-label">55세까지 안 쓸 돈</span>
-        <span class="s-value" style="color:var(--gold);">IRP 우선</span>
-      </div>
-      <div class="summary-row">
-        <div class="summary-dot" style="background:var(--blue);"></div>
-        <span class="s-label">3~10년 내 쓸 수 있는 돈</span>
-        <span class="s-value" style="color:var(--blue);">ISA 우선</span>
-      </div>
-      <div class="summary-row">
-        <div class="summary-dot" style="background:var(--dim);"></div>
-        <span class="s-label">언제든 빼야 할 수 있는 돈</span>
-        <span class="s-value" style="color:var(--dim);">일반계좌</span>
-      </div>
-      <div class="summary-row">
-        <div class="summary-dot" style="background:var(--green);"></div>
-        <span class="s-label">여유 자금이 충분하다면</span>
-        <span class="s-value" style="color:var(--green);">IRP → ISA → 일반 순서로</span>
-      </div>
+    <div class="info-card" style="font-weight:700; color:var(--cream); font-size:14px;" id="guide-title">
+      맞춤 배분 추천
+    </div>
+
+    <div class="guide-grid" id="guide-result"></div>
+
+    <div class="summary-box" id="guide-summary"></div>
+
+    <div class="info-card" style="margin-top:12px; font-size:12px; color:var(--dim);">
+      ※ 추천 순서: IRP(세액공제) → ISA(비과세) → 일반계좌(나머지). 55세 전 인출 불가한 IRP 특성을 고려하세요.
     </div>
   </div>
 
-  <!-- TAB 3: 계좌별 세금 구조 -->
+  <!-- TAB 3: 세금 실시간 비교 -->
   <div id="tab-detail" class="section">
-    <div class="info-card">
-      <strong>계좌별 세금 비교표</strong> <span class="mono">(2026년 기준)</span>
+    <div class="card">
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>투자 수익 (순이익)</span>
+          <div class="slider-value" id="v-d-profit">1,000만 원</div>
+        </div>
+        <input type="range" id="s-d-profit" min="100" max="5000" value="1000" step="50" oninput="calcDetail()">
+      </div>
+      <div class="toggle-row">
+        <div class="toggle" id="t-d-seomin" onclick="toggleDetailSeomin()"></div>
+        <span>ISA 서민형 (비과세 1,000만 원)</span>
+      </div>
     </div>
 
-    <div class="card" style="padding:0; overflow:hidden;">
-      <table style="width:100%; border-collapse:collapse; font-size:13px;">
-        <thead>
-          <tr style="background:var(--surface2);">
-            <th style="padding:14px 12px; text-align:left; color:var(--sub); font-weight:400;"></th>
-            <th style="padding:14px 12px; text-align:center; color:var(--gold); font-weight:700;">IRP</th>
-            <th style="padding:14px 12px; text-align:center; color:var(--blue); font-weight:700;">ISA</th>
-            <th style="padding:14px 12px; text-align:center; color:var(--dim); font-weight:700;">일반</th>
-          </tr>
-        </thead>
-        <tbody id="tax-table-body">
-          <tr style="border-bottom:1px solid var(--border);">
-            <td style="padding:12px; color:var(--sub);">납입 시 혜택</td>
-            <td style="padding:12px; text-align:center; font-weight:700; color:var(--gold);">세액공제 13.2~16.5%</td>
-            <td style="padding:12px; text-align:center; color:var(--sub);">없음</td>
-            <td style="padding:12px; text-align:center; color:var(--sub);">없음</td>
-          </tr>
-          <tr style="border-bottom:1px solid var(--border);">
-            <td style="padding:12px; color:var(--sub);">운용 중 과세</td>
-            <td style="padding:12px; text-align:center; font-weight:700; color:var(--gold);">과세이연</td>
-            <td style="padding:12px; text-align:center; font-weight:700; color:var(--blue);">과세이연</td>
-            <td style="padding:12px; text-align:center; color:var(--coral);">15.4% 매년</td>
-          </tr>
-          <tr style="border-bottom:1px solid var(--border);">
-            <td style="padding:12px; color:var(--sub);">수령 시 과세</td>
-            <td style="padding:12px; text-align:center; font-size:12px;">연금 수령: 3.3~5.5%</td>
-            <td style="padding:12px; text-align:center; font-size:12px;">비과세 500만<br>(서민형 1,000만)</td>
-            <td style="padding:12px; text-align:center; font-size:12px;">이미 납부</td>
-          </tr>
-          <tr style="border-bottom:1px solid var(--border);">
-            <td style="padding:12px; color:var(--sub);">초과분 세율</td>
-            <td style="padding:12px; text-align:center; font-size:12px;">일시금: 16.5%</td>
-            <td style="padding:12px; text-align:center; font-weight:700; color:var(--blue);">9.9% 분리과세</td>
-            <td style="padding:12px; text-align:center; color:var(--coral);">15.4%</td>
-          </tr>
-          <tr style="border-bottom:1px solid var(--border);">
-            <td style="padding:12px; color:var(--sub);">인출 제한</td>
-            <td style="padding:12px; text-align:center; color:var(--coral); font-size:12px;">55세까지 잠금</td>
-            <td style="padding:12px; text-align:center; font-size:12px;">3년 의무보유</td>
-            <td style="padding:12px; text-align:center; font-weight:700; color:var(--green);">자유</td>
-          </tr>
-          <tr>
-            <td style="padding:12px; color:var(--sub);">연 납입한도</td>
-            <td style="padding:12px; text-align:center; font-family:'DM Mono',monospace;">900만</td>
-            <td style="padding:12px; text-align:center; font-family:'DM Mono',monospace;">4,000만</td>
-            <td style="padding:12px; text-align:center; font-family:'DM Mono',monospace;">무제한</td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="results" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="result-card irp">
+        <div class="acct-name">IRP</div>
+        <div class="label" style="margin:8px 0 4px;">세금</div>
+        <div class="amount" id="d-irp-tax" style="font-size:16px;">0</div>
+        <div class="label" style="margin:8px 0 4px;">세후 수익</div>
+        <div class="amount" id="d-irp-net">0</div>
+        <div class="sub-info" id="d-irp-rate">실효세율 0%</div>
+      </div>
+      <div class="result-card isa">
+        <div class="acct-name">ISA</div>
+        <div class="label" style="margin:8px 0 4px;">세금</div>
+        <div class="amount" id="d-isa-tax" style="font-size:16px;">0</div>
+        <div class="label" style="margin:8px 0 4px;">세후 수익</div>
+        <div class="amount" id="d-isa-net">0</div>
+        <div class="sub-info" id="d-isa-rate">실효세율 0%</div>
+      </div>
+      <div class="result-card normal">
+        <div class="acct-name">일반</div>
+        <div class="label" style="margin:8px 0 4px;">세금</div>
+        <div class="amount" id="d-normal-tax" style="font-size:16px;">0</div>
+        <div class="label" style="margin:8px 0 4px;">세후 수익</div>
+        <div class="amount" id="d-normal-net">0</div>
+        <div class="sub-info" id="d-normal-rate">실효세율 15.4%</div>
+      </div>
+    </div>
+
+    <div class="winner-banner" id="d-winner-banner">
+      <div class="winner-label" id="d-winner-label">IRP가 가장 유리</div>
+      일반계좌 대비 <strong id="d-winner-save">0만</strong> 절세
+    </div>
+
+    <div class="chart-wrap" style="height:240px;">
+      <canvas id="chart-detail"></canvas>
     </div>
 
     <div class="info-card" style="margin-top:16px;">
-      <strong>핵심 요약</strong><br><br>
-      <span class="mono">IRP</span> — 넣을 때 돌려받고(세액공제), 불릴 때 미루고(과세이연), 뺄 때 깎아줌(저율과세). 가장 강력하지만 55세까지 묶임.<br><br>
-      <span class="mono">ISA</span> — 넣을 때 혜택은 없지만, 뺄 때 500만(서민형 1,000만)까지 세금 0원. 초과분도 9.9%로 일반(15.4%)보다 유리. 3년만 버티면 됨.<br><br>
-      <span class="mono">일반</span> — 자유롭지만 비싸다. 이자·배당에 매년 15.4%. 위 두 계좌를 먼저 채우고 나서 쓰는 게 정답.
+      <strong>계좌별 세금 구조</strong> <span class="mono">(2026년 기준)</span><br><br>
+      <span class="mono" style="color:var(--gold);">IRP</span> — 연금 수령 시 3.3~5.5% (평균 4.4%). 넣을 때 세액공제까지 합하면 가장 강력. 단, 55세까지 잠금.<br><br>
+      <span class="mono" style="color:var(--blue);">ISA</span> — 수익 500만(서민형 1,000만)까지 비과세. 초과분 9.9% 분리과세. 3년 보유 후 인출 가능.<br><br>
+      <span class="mono">일반</span> — 이자·배당에 15.4% 매년 원천징수. 자유롭지만 가장 비싸다.
     </div>
   </div>
 
@@ -718,13 +676,158 @@ function calcSim() {
   });
 }
 
+// ─── TAB 2: 맞춤 배분 추천 ───
+function calcGuide() {
+  const salary = parseInt(document.getElementById('s-g-salary').value);
+  const budget = parseInt(document.getElementById('s-g-budget').value);
+
+  document.getElementById('v-g-salary').textContent = salary.toLocaleString() + '만 원';
+  document.getElementById('v-g-budget').textContent = budget.toLocaleString() + '만 원';
+
+  const creditPct = salary <= 5500 ? 16.5 : 13.2;
+
+  // 배분: IRP(최대 900) → ISA(최대 4000) → 일반(나머지)
+  const toIrp = Math.min(budget, 900);
+  const toIsa = Math.min(budget - toIrp, 4000);
+  const toNormal = Math.max(0, budget - toIrp - toIsa);
+
+  const irpCredit = toIrp * creditPct / 100;
+
+  const resultEl = document.getElementById('guide-result');
+  let cards = '';
+
+  if (toIrp > 0) {
+    cards += '<div class="guide-card irp">' +
+      '<div class="guide-icon">1</div>' +
+      '<div class="guide-body">' +
+        '<div class="g-title">연금저축 + IRP — <span class="g-highlight">' + toIrp + '만 원</span></div>' +
+        '<div class="g-desc">세액공제 ' + creditPct + '% → <span class="g-highlight">연 ' + irpCredit.toFixed(1) + '만 원 환급</span><br>' +
+        '과세이연으로 복리 효과 극대화. 55세 이후 3.3~5.5% 저율과세.</div>' +
+      '</div></div>';
+  }
+
+  if (toIsa > 0) {
+    const isaFree = salary <= 5000 ? '1,000만' : '500만';
+    cards += '<div class="guide-card isa">' +
+      '<div class="guide-icon">' + (toIrp > 0 ? '2' : '1') + '</div>' +
+      '<div class="guide-body">' +
+        '<div class="g-title">ISA — <span style="color:var(--blue);">' + toIsa.toLocaleString() + '만 원</span></div>' +
+        '<div class="g-desc">순이익 ' + isaFree + '까지 비과세, 초과분 9.9% 분리과세.<br>' +
+        '3년 의무보유 후 자유인출. 중기 자금에 적합.</div>' +
+      '</div></div>';
+  }
+
+  if (toNormal > 0) {
+    const order = (toIrp > 0 ? 1 : 0) + (toIsa > 0 ? 1 : 0) + 1;
+    cards += '<div class="guide-card normal">' +
+      '<div class="guide-icon">' + order + '</div>' +
+      '<div class="guide-body">' +
+        '<div class="g-title">일반계좌 — ' + toNormal.toLocaleString() + '만 원</div>' +
+        '<div class="g-desc">절세 혜택 없음 (15.4% 과세). IRP·ISA 한도 초과분을 여기에 배치.</div>' +
+      '</div></div>';
+  }
+
+  resultEl.innerHTML = cards;
+
+  // 요약
+  const totalCredit = irpCredit;
+  const summaryEl = document.getElementById('guide-summary');
+  summaryEl.innerHTML =
+    '<div style="font-size:14px; font-weight:700; margin-bottom:12px; color:var(--cream);">배분 요약</div>' +
+    '<div class="summary-row"><div class="summary-dot" style="background:var(--gold);"></div>' +
+      '<span class="s-label">IRP 배분</span><span class="s-value" style="color:var(--gold);">' + toIrp + '만 원</span></div>' +
+    '<div class="summary-row"><div class="summary-dot" style="background:var(--blue);"></div>' +
+      '<span class="s-label">ISA 배분</span><span class="s-value" style="color:var(--blue);">' + toIsa.toLocaleString() + '만 원</span></div>' +
+    (toNormal > 0 ? '<div class="summary-row"><div class="summary-dot" style="background:var(--dim);"></div>' +
+      '<span class="s-label">일반계좌</span><span class="s-value" style="color:var(--dim);">' + toNormal.toLocaleString() + '만 원</span></div>' : '') +
+    '<div class="summary-row" style="border-top:1px solid var(--border); padding-top:12px; margin-top:4px;">' +
+      '<div class="summary-dot" style="background:var(--green);"></div>' +
+      '<span class="s-label">연간 절세 효과</span><span class="s-value" style="color:var(--green);">' + totalCredit.toFixed(1) + '만 원</span></div>';
+}
+
+// ─── TAB 3: 세금 실시간 비교 ───
+let chartDetail = null;
+let detailSeominOn = false;
+
+function toggleDetailSeomin() {
+  detailSeominOn = !detailSeominOn;
+  document.getElementById('t-d-seomin').classList.toggle('on');
+  calcDetail();
+}
+
+function calcDetail() {
+  const profit = parseInt(document.getElementById('s-d-profit').value);
+  document.getElementById('v-d-profit').textContent = profit.toLocaleString() + '만 원';
+
+  // IRP: 연금수령 4.4%
+  const irpTax = profit * 0.044;
+  const irpNet = profit - irpTax;
+  const irpEffRate = (irpTax / profit * 100);
+
+  // ISA: 비과세 한도 + 9.9%
+  const isaFree = detailSeominOn ? 1000 : 500;
+  const isaTaxable = Math.max(0, profit - isaFree);
+  const isaTax = isaTaxable * 0.099;
+  const isaNet = profit - isaTax;
+  const isaEffRate = profit > 0 ? (isaTax / profit * 100) : 0;
+
+  // 일반: 15.4%
+  const normalTax = profit * 0.154;
+  const normalNet = profit - normalTax;
+
+  document.getElementById('d-irp-tax').textContent = irpTax.toFixed(1) + '만';
+  document.getElementById('d-irp-net').textContent = fmt(irpNet);
+  document.getElementById('d-irp-rate').textContent = '실효세율 ' + irpEffRate.toFixed(1) + '%';
+
+  document.getElementById('d-isa-tax').textContent = isaTax.toFixed(1) + '만';
+  document.getElementById('d-isa-net').textContent = fmt(isaNet);
+  document.getElementById('d-isa-rate').textContent = profit <= isaFree ? '비과세 구간' : '실효세율 ' + isaEffRate.toFixed(1) + '%';
+
+  document.getElementById('d-normal-tax').textContent = normalTax.toFixed(1) + '만';
+  document.getElementById('d-normal-net').textContent = fmt(normalNet);
+  document.getElementById('d-normal-rate').textContent = '실효세율 15.4%';
+
+  // Winner
+  const best = Math.max(irpNet, isaNet, normalNet);
+  let name = 'IRP', color = C.gold;
+  if (best === isaNet) { name = 'ISA'; color = C.blue; }
+  if (best === normalNet) { name = '일반계좌'; color = C.dim; }
+  document.getElementById('d-winner-label').textContent = name + '가 가장 유리';
+  document.getElementById('d-winner-label').style.color = color;
+  document.getElementById('d-winner-save').textContent = (normalTax - Math.min(irpTax, isaTax)).toFixed(1) + '만';
+
+  // Bar chart
+  if (chartDetail) chartDetail.destroy();
+  chartDetail = new Chart(document.getElementById('chart-detail'), {
+    type: 'bar',
+    data: {
+      labels: ['IRP', 'ISA', '일반계좌'],
+      datasets: [
+        { label: '세후 수익', data: [irpNet, isaNet, normalNet], backgroundColor: [C.gold, C.blue, C.dim], borderRadius: 6 },
+        { label: '세금', data: [irpTax, isaTax, normalTax], backgroundColor: ['rgba(184,137,46,0.2)', 'rgba(74,127,165,0.2)', 'rgba(168,162,154,0.2)'], borderRadius: 6 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: C.label, font: { size: 11, family: "'Noto Sans KR'" }, padding: 16 } },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw.toFixed(1) + '만' } }
+      },
+      scales: {
+        x: { stacked: true, ticks: { color: C.label }, grid: { display: false } },
+        y: { stacked: true, ticks: { color: C.dim, callback: v => v + '만' }, grid: { color: C.grid } }
+      }
+    }
+  });
+}
+
 // Init
 const hash = location.hash.replace('#', '');
-if (['sim', 'guide', 'detail'].includes(hash)) {
-  showTab(hash);
-} else {
-  calcSim();
-}
+if (hash === 'guide') { showTab('guide'); calcGuide(); }
+else if (hash === 'detail') { showTab('detail'); calcDetail(); }
+else { calcSim(); }
+calcGuide();
+calcDetail();
 </script>
 </body>
 </html>
